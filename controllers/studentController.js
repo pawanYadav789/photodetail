@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const ExcelJS = require('exceljs');
 
-// 🔹 Save student data with base64 image
 exports.saveStudent = async (req, res) => {
   try {
     const {
@@ -16,18 +15,10 @@ exports.saveStudent = async (req, res) => {
       className,
       mobileNo,
       section,
-      schoolId,
-      photo // ⬅️ Base64 string expected from frontend
+      schoolId
     } = req.body;
 
-    let filename = null;
-
-    if (photo) {
-      filename = `${Date.now()}.jpg`;
-      const buffer = Buffer.from(photo, 'base64');
-      const uploadPath = path.join(__dirname, '../uploads', filename);
-      fs.writeFileSync(uploadPath, buffer);
-    }
+    const filename = req.file?.filename || null;
 
     const request = pool.request();
     await request
@@ -43,44 +34,59 @@ exports.saveStudent = async (req, res) => {
       .input('schoolId', schoolId)
       .input('photo', filename)
       .query(`
-        INSERT INTO students 
+        INSERT INTO student_entries 
         (name, address, fatherName, schoolName, dateOfBirth, studentId, className, mobileNo, section, schoolId, photo)
         VALUES (@name, @address, @fatherName, @schoolName, @dateOfBirth, @studentId, @className, @mobileNo, @section, @schoolId, @photo)
       `);
 
     res.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error('Save Error:', err);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 };
 
-// 🔹 Get students with optional filters
+// ✅ Base64 image भेजने वाला getStudents
 exports.getStudents = async (req, res) => {
   try {
     const { class: className, section, schoolId } = req.query;
 
-    let query = 'SELECT * FROM students WHERE 1=1';
+    let query = 'SELECT * FROM student_entries WHERE 1=1';
     if (schoolId) query += ` AND schoolId = '${schoolId}'`;
     if (className) query += ` AND className = '${className}'`;
     if (section) query += ` AND section = '${section}'`;
 
     const request = pool.request();
     const result = await request.query(query);
+    const students = result.recordset;
 
-    res.json({ success: true, data: result.recordset });
+    const studentsWithBase64 = students.map(student => {
+      const photoPath = path.join(__dirname, '../uploads', student.photo || '');
+      let base64Image = '';
+
+      if (student.photo && fs.existsSync(photoPath)) {
+        const imageBuffer = fs.readFileSync(photoPath);
+        base64Image = imageBuffer.toString('base64');
+      }
+
+      return {
+        ...student,
+        photo: base64Image,
+      };
+    });
+
+    res.json({ success: true, data: studentsWithBase64 });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+    console.error('Get Students Error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 };
 
-// 🔹 Export filtered students to Excel with images
 exports.downloadExcel = async (req, res) => {
   try {
     const { class: className, section, schoolId } = req.query;
 
-    let query = 'SELECT * FROM students WHERE 1=1';
+    let query = 'SELECT * FROM student_entries WHERE 1=1';
     if (schoolId) query += ` AND schoolId = '${schoolId}'`;
     if (className) query += ` AND className = '${className}'`;
     if (section) query += ` AND section = '${section}'`;
@@ -107,10 +113,11 @@ exports.downloadExcel = async (req, res) => {
     for (let i = 0; i < students.length; i++) {
       const student = students[i];
       const rowIndex = i + 2;
+
       worksheet.addRow({ ...student });
 
       const imagePath = path.join(__dirname, '../uploads', student.photo);
-      if (fs.existsSync(imagePath)) {
+      if (student.photo && fs.existsSync(imagePath)) {
         const imageId = workbook.addImage({
           filename: imagePath,
           extension: 'jpeg'
@@ -118,7 +125,7 @@ exports.downloadExcel = async (req, res) => {
 
         worksheet.addImage(imageId, {
           tl: { col: 8, row: rowIndex - 1 },
-          ext: { width: 100, height: 100 }
+          ext: { width: 80, height: 80 }
         });
       }
     }
@@ -127,11 +134,7 @@ exports.downloadExcel = async (req, res) => {
     await workbook.xlsx.writeFile(filePath);
     res.download(filePath);
   } catch (err) {
-    console.error(err);
+    console.error('Excel Export Error:', err);
     res.status(500).send('Excel generation failed');
   }
 };
-
-
-
-

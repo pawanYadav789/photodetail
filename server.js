@@ -1,28 +1,28 @@
-// server.js
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const studentRoutes = require('./routes/studentRoutes');
-const authRoutes = require('./routes/authRoutes'); // ✅ ADD this line
+const authRoutes = require('./routes/authRoutes');
+
+dotenv.config({ quiet: true }); 
 
 const app = express();
-dotenv.config();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Serve static files (images, excel)
+//  Static Files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/exports', express.static(path.join(__dirname, 'exports')));
 
-// ✅ Routes
+//  Routes
 app.use('/api', studentRoutes);
-app.use('/api', authRoutes); // ✅ ADD this line for login route
+app.use('/api/auth', authRoutes);
 
-// ✅ Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+//  Server Start
+app.listen(3000, '0.0.0.0', () => {
+  console.log('Server running on port 3000');
 });

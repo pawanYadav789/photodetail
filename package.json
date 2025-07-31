@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
@@ -22,6 +23,7 @@
     "mssql": "^11.0.1",
     "multer": "^2.0.1",
     "mysql2": "^3.14.1",
+    "sharp": "^0.32.6",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

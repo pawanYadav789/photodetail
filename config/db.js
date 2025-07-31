@@ -1,11 +1,15 @@
-const sql = require('mssql/msnodesqlv8');
+require('dotenv').config();
+const sql = require('mssql'); 
 
 const config = {
-  server: 'LAPTOP-7CSE8CSJ', // ✅ your local server name
-  database: 'StudentAppDB',
-  driver: 'msnodesqlv8',
+  server: process.env.DB_SERVER,
+  database: process.env.DB_DATABASE,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT) || 1433,
   options: {
-    trustedConnection: true,
+    encrypt: process.env.DB_ENCRYPT === 'true', // true for Azure or remote servers
+    trustServerCertificate: true, 
   },
 };
 
@@ -14,10 +18,10 @@ const poolConnect = pool.connect();
 
 poolConnect
   .then(() => {
-    console.log('✅ MSSQL Connected Successfully to StudentAppDB');
+    console.log(' Connected to SQL Server:', process.env.DB_SERVER);
   })
   .catch(err => {
-    console.error('❌ DB Connection Failed:', err.message);
+    console.error(' SQL Connection Failed:', err.message);
   });
 
 module.exports = {
